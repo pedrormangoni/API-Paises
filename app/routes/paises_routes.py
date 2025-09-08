@@ -34,55 +34,15 @@ async def criar_pais(pais: Pais, request: Request):
      return str(resultado.inserted_id)
 
 @router.put("/{pais_id}") 
-async def atualizar_serie(pais_id: str, pais: Pais, request: Request):   
+async def atualizar_pais(pais_id: str, pais: Pais, request: Request):   
       # Obtém a coleção 'paises' do banco de dados   
       paises_collection = request.app.db.paises   
       # Converte o id recebido para o tipo ObjectId do MongoDB   
       _pais_id = ObjectId(pais_id)   
-      # Atualiza a série com os novos dados   
+      # Atualiza o pais com os novos dados   
       result = paises_collection.update_one({"_id": _pais_id}, {"$set": pais.model_dump()})   
       # Retorna quantos paises foram atualizadas   
       return {"series_atualizadas": result.modified_count}
-
-@router.get("/idh>500/")
-async def idh_maior_que_500(request: Request):
-    paises = request.app.db.paises  
-    resultado = list(paises.find({"idh": {"$gt": 500}}))
-    for i in resultado:
-        i["_id"] = str(i["_id"])
-    return {"paises": resultado}
-
-@router.get("/loc_SA/")
-async def loc_sudamerica(request: Request):
-   paises = request.app.db.paises 
-   resultado = list(paises.find({"localizacao": {"$in": ["South America"]}}))
-   for i in resultado:
-       i["_id"] = str(i["_id"])
-   return {"paises": resultado}
-
-@router.get("/clima_tropical")
-async def clima_tropical(request: Request):
-   paises = request.app.db.paises 
-   resultado = list(paises.find({"clima": {"$in": ["tropical"]}}))
-   for i in resultado:
-       i["_id"] = str(i["_id"])
-   return {"paises": resultado}
-
-@router.get("/mais_que_100m_habitantes")
-async def habitantes_maior_100m(request: Request):
-   paises = request.app.db.paises 
-   resultado = list(paises.find({"habitantes": {"$gt": 100000000}}))
-   for i in resultado:
-       i["_id"] = str(i["_id"])
-   return {"paises": resultado}
-
-@router.get("/avaliacao<=5")
-async def avaliacao_menor_igual_a_5(request: Request):
-   paises = request.app.db.paises 
-   resultado = list(paises.find({"avaliacao": {"$lte": 5}}))
-   for i in resultado:
-       i["_id"] = str(i["_id"])
-   return {"paises": resultado}
 
 @router.delete("/{pais_id}") 
 async def deletar_pais(pais_id: str, request: Request):     

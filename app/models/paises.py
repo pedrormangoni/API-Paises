@@ -11,7 +11,7 @@ class Pais(BaseModel):
     pontos_turisticos: Optional[List[str]] = None
     culinaria: Optional[List[str]] = None
     clima: Optional[str] = None
-    idh: Optional[int] = None
+    idh: Optional[float] = None
     avaliacao: Optional[float] = None
 
     
