@@ -1,6 +1,8 @@
 import pytest 
 from pydantic import ValidationError
 from app.models.paises import Pais
+import os
+os.environ["TESTING"] = "1"
 
 def test_criar_pais_valido():
     pais = Pais(
@@ -45,7 +47,7 @@ def test_criar_pais_informacao_invalida():
         )
 
 def test_criar_apenas_obrigatorios():
-    pais = Pais(
+    novo_pais = Pais(
         nome="Apenas dados obrigatorios",
         localizacao="testes",
         habitantes=1,
@@ -53,12 +55,12 @@ def test_criar_apenas_obrigatorios():
         capital="testes",
         moeda="testes"
     )   
-    assert pais.nome == "Apenas dados obrigatorios"
-    assert pais.pontos_turisticos is None
+    assert novo_pais.nome == "Apenas dados obrigatorios"
+    assert novo_pais.pontos_turisticos is None
 
 @pytest.mark.parametrize("campo", ["nome", "localizacao", "habitantes", "linguas", "capital", "moeda"])
 def test_criar_sem_campo_obrigatorio(campo):
-    data = {
+    novo_pais = {
         "nome": "Argentina",
         "localizacao": "América do Sul",
         "habitantes": 45_000_000,
@@ -66,6 +68,6 @@ def test_criar_sem_campo_obrigatorio(campo):
         "capital": "Buenos Aires",
         "moeda": "Peso"
     } 
-    data.pop(campo)
+    novo_pais.pop(campo)
     with pytest.raises(ValidationError):
-        Pais(**data)
+        Pais(**novo_pais)

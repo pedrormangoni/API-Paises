@@ -1,60 +1,69 @@
 from fastapi import APIRouter, Request 
 from bson import ObjectId
 from typing import List
-from models.paises import Pais
+
+from fastapi.responses import JSONResponse
+from app.models.paises import Pais
+import os
 
 router = APIRouter(prefix="", tags=['paises']) 
 
-# Rota para testar a conexão com o banco de dados
-@router.get("/testar_conexao")
-async def testar_conexao(request: Request):
-    try:
-        colecoes = request.app.db.list_collection_names()
-        return {"status": "conectado", "colecoes": colecoes}
-    except Exception as e:
-        return {"status": "erro", "detalhe": str(e)}
+def get_collection(request):
+    if os.getenv("TESTING") == "1":
+        return request.app.db["paises_testes"]
+    return request.app.db["paises"]
 
-# Rota para buscar todas os paises cadastrados
 @router.get("/buscar_todos/")
 async def buscar_todos_paises(request: Request):
-    collection = request.app.db["paises"]
+    collection = get_collection(request)
     paises = list(collection.find())
     for pais in paises:
         pais["_id"] = str(pais["_id"])
     return {"paises": paises}
 
-# Rota para inserir um novo pais
 @router.post("/")
 async def criar_pais(pais: Pais, request: Request):
-     # Obtém a coleção 'paises' do banco de dados
-     collection = request.app.db["paises"]
-       # Insere o pais recebida no banco
-     resultado = collection.insert_one(pais.model_dump())
-    # Retorna apenas o id gerado
-     return str(resultado.inserted_id)
+    collection = get_collection(request)
+    resultado = collection.insert_one(pais.model_dump())
+    return str(resultado.inserted_id)
 
 @router.put("/{pais_id}") 
 async def atualizar_pais(pais_id: str, pais: Pais, request: Request):   
-      # Obtém a coleção 'paises' do banco de dados   
-      paises_collection = request.app.db.paises   
-      # Converte o id recebido para o tipo ObjectId do MongoDB   
-      _pais_id = ObjectId(pais_id)   
-      # Atualiza o pais com os novos dados   
-      result = paises_collection.update_one({"_id": _pais_id}, {"$set": pais.model_dump()})   
-      # Retorna quantos paises foram atualizadas   
-      return {"series_atualizadas": result.modified_count}
+    collection = get_collection(request)
+    try:
+        _pais_id = ObjectId(pais_id)
+    except Exception:
+        return JSONResponse(status_code=422, content={"detail": "ID inválido"})
+    result = collection.update_one({"_id": _pais_id}, {"$set": pais.model_dump()})
+    if result.matched_count == 0:
+        return JSONResponse(status_code=404, content={"detail": "Pais nao encontrado"})
+    return {"paises_atualizados": result.modified_count}
 
 @router.delete("/{pais_id}") 
 async def deletar_pais(pais_id: str, request: Request):     
-      paises_collection = request.app.db.paises  
+    collection = get_collection(request)
+    try:
+        object_id = ObjectId(pais_id)
+    except Exception:
+        return JSONResponse(status_code=422, content={"detail": "ID inválido"})
+    
+    resultado = collection.find_one({"_id": object_id})
+    if not resultado:
+        return JSONResponse(status_code=404, content={"detail": "Pais nao encontrado"})
 
-      _pais_id = ObjectId(pais_id)
+    collection.delete_one({"_id": object_id})
+    return {"mensagem": f"País deletado com sucesso: ID: {pais_id}, Nome: {resultado['nome']}"}
 
-      resultado = paises_collection.find_one({"_id": _pais_id})
-
-      nome = resultado["nome"] if resultado else "não encontrado"
-      
-      return {"mensagem": f"Pais deletado com sucesso: ID: {pais_id}, Nome: {nome}"}
-
-
-
+@router.get("/{pais_id}")
+async def buscar_pais(pais_id: str, request: Request):
+    collection = get_collection(request)
+    try:
+        _pais_id = ObjectId(pais_id)
+    except Exception:
+        return JSONResponse(status_code=422, content={"detail": "ID inválido"})
+    
+    pais = collection.find_one({"_id": _pais_id})
+    if not pais:
+        return JSONResponse(status_code=404, content={"detail": "Pais nao encontrado"})
+    pais["_id"] = str(pais["_id"])
+    return pais

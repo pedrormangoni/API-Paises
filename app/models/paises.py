@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Union
 
 class Pais(BaseModel):
     nome: str
     localizacao: str
     habitantes: int = Field(gt=0)
-    linguas: str
+    linguas: Union[str, List[str]]
     capital: str
     moeda: str
     pontos_turisticos: Optional[List[str]] = None
