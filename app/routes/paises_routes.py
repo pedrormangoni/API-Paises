@@ -2,10 +2,16 @@ from fastapi import APIRouter, Request, Query
 from fastapi.responses import JSONResponse
 from bson import ObjectId
 from typing import List, Optional
+import unicodedata
 
 from fastapi.responses import JSONResponse
 from app.models.paises import Pais
 import os
+
+def filtrar_input(texto: str) -> str:
+    texto = texto.lower()
+    texto = unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('utf-8')
+    return texto
 
 router = APIRouter(prefix="", tags=['paises']) 
 
@@ -69,21 +75,26 @@ async def buscar_pais(pais_id: str, request: Request):
     pais["_id"] = str(pais["_id"])
     return pais
 
-@router.get("/paises/localizacao/{localizacao}")
-async def buscar_paises_localizacao(localizacao: str, request: Request):
+@router.get("/paises/continente/{continente}")
+async def buscar_paises_continente(continente: str, request: Request):
     collection = get_collection(request)
+    texto_filtrado = filtrar_input(continente)
+    continente = texto_filtrado.capitalize()
     try:
-        paises = list(collection.find({"localizacao": localizacao}, {'_id': 0}))
+        paises = list(collection.find({"continente": {"$regex": continente, "$options": "i"}}, {'_id': 0}))
         if not paises:
-            return JSONResponse(status_code=404, content={"detail": "Nenhum pais na localizacao"})
+            return JSONResponse(status_code=404, content={"detail": "Nenhum pais no continente"})
+        return JSONResponse(status_code=200, content={"paises": paises})
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
 
 @router.get("/paises/linguas/{linguas}")
 async def buscar_paises_por_lingua(linguas: str, request: Request):
     collection = get_collection(request)
+    texto_filtrado = filtrar_input(linguas)
+    linguas = texto_filtrado.capitalize()
     try:
-        paises = list(collection.find({"linguas": linguas}, {'_id': 0}))
+        paises = list(collection.find({"linguas": {"$regex": linguas, "$options": "i"}}, {'_id': 0}))
         if not paises:
             return JSONResponse(status_code=404, content={"detail": "Nenhum país com essa linguagem"})
         return {"paises": paises, "detail": "Um ou mais país encontrado"}
@@ -93,8 +104,10 @@ async def buscar_paises_por_lingua(linguas: str, request: Request):
 @router.get("/paises/moeda/{moeda}")
 async def buscar_paises_por_moeda(moeda: str, request: Request):
     collection = get_collection(request)
+    texto_filtrado = filtrar_input(moeda)
+    moeda = texto_filtrado.capitalize()
     try:
-        paises = list(collection.find({"moeda": moeda}, {'_id': 0}))
+        paises = list(collection.find({"moeda": {"$regex": moeda , "$options": "i"}}, {'_id': 0}))
         if not paises:
             return JSONResponse(status_code=404, content={"detail": "Nenhum país com essa moeda"})
         
@@ -105,27 +118,69 @@ async def buscar_paises_por_moeda(moeda: str, request: Request):
 @router.get("/paises/filtrar")
 async def buscar_paises_filtrados(
     request: Request,
-    localizacao: Optional[str] = Query(None),
-    linguas: Optional[str] = Query(None)
+    continente: Optional[str] = Query(
+        None, description="Nome do continente para filtrar."
+    ),
+    linguas: Optional[str] = Query(
+        None, description="Língua(s) falada(s) no país."
+    ),
+    km2: Optional[float] = Query(
+        None, gt=0, description="Área do país em km², deve ser um valor positivo."
+    ),
+    habitantes: Optional[int] = Query(
+        None, gt=0, description="Número de habitantes, deve ser um valor inteiro positivo."
+    ),
+    longitude: Optional[float] = Query(
+        None, description="Coordenada de longitude do país."
+    ),
+    latitude: Optional[float] = Query(
+        None, description="Coordenada de latitude do país."
+    ),
+    clima: Optional[str] = Query(
+        None, description="Tipo de clima predominante."
+    ),
+    fuso_horario: Optional[str] = Query(
+        None, description="Fuso horário do país."
+    )
 ):
     collection = get_collection(request)
     filtro = {}
-    if localizacao:
-        filtro["localizacao"] = localizacao
+    if continente:
+        filtro["continente"] = continente
     if linguas:
-        filtro["linguas"] = linguas
+        filtro["linguas"] = {"$in": linguas.split(',')} 
+    if km2:
+        filtro["km2"] = km2
+    if habitantes:
+        filtro["habitantes"] = habitantes
+    if longitude:
+        filtro["longitude"] = longitude
+    if latitude:
+        filtro["latitude"] = latitude
+    if clima:
+        filtro["clima"] = clima
+    if fuso_horario:
+        filtro["fuso_horario"] = fuso_horario
     if not filtro:
         return JSONResponse(
             status_code=400,
-            content={"detail": "Forneça pelo menos um critério de busca (localizacao ou linguas)."}
+            content={"detail": "Forneça pelo menos um critério de busca."}
         )
     try:
         paises = list(collection.find(filtro, {'_id': 0}))
-        if not paises:
-            return JSONResponse(status_code=404, content={"detail": "Nenhum país encontrado com os critérios fornecidos."})     
-        return {"paises": paises, "detail": "Um ou mais países encontrados."}
+        if paises:
+            return {"paises": paises, "detail": f"{len(paises)} país(es) encontrado(s)."}
+        else:
+            return JSONResponse(
+                status_code=404, 
+                content={"detail": "Nenhum país encontrado com os critérios fornecidos."}
+            )
     except Exception as e:
-        return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
+        print(f"Erro ao buscar países: {e}")
+        return JSONResponse(
+            status_code=500, 
+            content={"detail": "Erro interno no servidor."}
+        )
 
 
     

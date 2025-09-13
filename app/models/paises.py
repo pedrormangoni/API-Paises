@@ -3,16 +3,17 @@ from typing import Optional, List, Union
 
 class Pais(BaseModel):
     nome: str
-    localizacao: str
+    continente: str
     habitantes: int = Field(gt=0)
     linguas: Union[str, List[str]]
-    capital: str
     moeda: str
-    pontos_turisticos: Optional[List[str]] = None
-    culinaria: Optional[List[str]] = None
+    km2: float = Field(gt=0)
+    longitude: float
+    latitude: float
     clima: Optional[str] = None
-    idh: Optional[float] = None
-    avaliacao: Optional[float] = None
+    fuso_horario: Optional[str] = None
+    
+
 
     
 
