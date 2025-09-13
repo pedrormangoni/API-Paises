@@ -1,17 +1,17 @@
 from fastapi.testclient import TestClient
-from app.main import app
+from main import app
 import os
 os.environ["TESTING"] = "1"
 
 def test_fluxo_completo_pais():
     """
     Testa o fluxo completo de um pais na API:
-    1. Cria um novo pais.
-    2. Busca o pais criado para verificar se ele existe.
-    3. Atualiza os dados do pais.
-    4. Busca o pais atualizado para verificar a modificação.
-    5. Deleta o pais.
-    6. Tenta buscar o pais novamente para confirmar que foi deletado.
+    1. Cria um novo pais
+    2. Busca o pais criado para verificar se ele existe
+    3. Atualiza os dados do pais
+    4. Busca o pais atualizado para verificar a modificação
+    5. Deleta o pais
+    6. Tenta buscar o pais novamente para confirmar que foi deletado
     """
     with TestClient(app) as client:
         # 1. Cria um novo pais

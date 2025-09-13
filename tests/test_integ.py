@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from app.main import app
+from main import app
 import os
 os.environ["TESTING"] = "1"
 
@@ -45,7 +45,6 @@ def test_criar_e_buscar_pais():
 
 def test_atualizar_e_deletar_pais():
     with TestClient(app) as client:
-
         novo_pais = {
             "nome": "Update",
             "localizacao": "Update",

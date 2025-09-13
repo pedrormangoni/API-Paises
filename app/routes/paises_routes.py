@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Request 
+from fastapi import APIRouter, Request, Query
+from fastapi.responses import JSONResponse
 from bson import ObjectId
-from typing import List
+from typing import List, Optional
 
 from fastapi.responses import JSONResponse
 from app.models.paises import Pais
@@ -67,3 +68,64 @@ async def buscar_pais(pais_id: str, request: Request):
         return JSONResponse(status_code=404, content={"detail": "Pais nao encontrado"})
     pais["_id"] = str(pais["_id"])
     return pais
+
+@router.get("/paises/localizacao/{localizacao}")
+async def buscar_paises_localizacao(localizacao: str, request: Request):
+    collection = get_collection(request)
+    try:
+        paises = list(collection.find({"localizacao": localizacao}, {'_id': 0}))
+        if not paises:
+            return JSONResponse(status_code=404, content={"detail": "Nenhum pais na localizacao"})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
+
+@router.get("/paises/linguas/{linguas}")
+async def buscar_paises_por_lingua(linguas: str, request: Request):
+    collection = get_collection(request)
+    try:
+        paises = list(collection.find({"linguas": linguas}, {'_id': 0}))
+        if not paises:
+            return JSONResponse(status_code=404, content={"detail": "Nenhum país com essa linguagem"})
+        return {"paises": paises, "detail": "Um ou mais país encontrado"}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
+    
+@router.get("/paises/moeda/{moeda}")
+async def buscar_paises_por_moeda(moeda: str, request: Request):
+    collection = get_collection(request)
+    try:
+        paises = list(collection.find({"moeda": moeda}, {'_id': 0}))
+        if not paises:
+            return JSONResponse(status_code=404, content={"detail": "Nenhum país com essa moeda"})
+        
+        return {"paises": paises, "detail": "Um ou mais país encontrado"}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
+
+@router.get("/paises/filtrar")
+async def buscar_paises_filtrados(
+    request: Request,
+    localizacao: Optional[str] = Query(None),
+    linguas: Optional[str] = Query(None)
+):
+    collection = get_collection(request)
+    filtro = {}
+    if localizacao:
+        filtro["localizacao"] = localizacao
+    if linguas:
+        filtro["linguas"] = linguas
+    if not filtro:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Forneça pelo menos um critério de busca (localizacao ou linguas)."}
+        )
+    try:
+        paises = list(collection.find(filtro, {'_id': 0}))
+        if not paises:
+            return JSONResponse(status_code=404, content={"detail": "Nenhum país encontrado com os critérios fornecidos."})     
+        return {"paises": paises, "detail": "Um ou mais países encontrados."}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
+
+
+    
