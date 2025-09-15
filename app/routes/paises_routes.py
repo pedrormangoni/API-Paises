@@ -28,13 +28,13 @@ async def buscar_todos_paises(request: Request):
         pais["_id"] = str(pais["_id"])
     return {"paises": paises}
 
-@router.post("/")
+@router.post("/criar/")
 async def criar_pais(pais: Pais, request: Request):
     collection = get_collection(request)
     resultado = collection.insert_one(pais.model_dump())
     return str(resultado.inserted_id)
 
-@router.put("/{pais_id}") 
+@router.put("/atualizar/{pais_id}") 
 async def atualizar_pais(pais_id: str, pais: Pais, request: Request):   
     collection = get_collection(request)
     try:
@@ -46,7 +46,7 @@ async def atualizar_pais(pais_id: str, pais: Pais, request: Request):
         return JSONResponse(status_code=404, content={"detail": "Pais nao encontrado"})
     return {"paises_atualizados": result.modified_count}
 
-@router.delete("/{pais_id}") 
+@router.delete("/deletar/{pais_id}") 
 async def deletar_pais(pais_id: str, request: Request):     
     collection = get_collection(request)
     try:
@@ -61,7 +61,7 @@ async def deletar_pais(pais_id: str, request: Request):
     collection.delete_one({"_id": object_id})
     return {"mensagem": f"País deletado com sucesso: ID: {pais_id}, Nome: {resultado['nome']}"}
 
-@router.get("/{pais_id}")
+@router.get("/buscar/{pais_id}")
 async def buscar_pais(pais_id: str, request: Request):
     collection = get_collection(request)
     try:
@@ -75,7 +75,7 @@ async def buscar_pais(pais_id: str, request: Request):
     pais["_id"] = str(pais["_id"])
     return pais
 
-@router.get("/paises/continente/{continente}")
+@router.get("/continente/{continente}")
 async def buscar_paises_continente(continente: str, request: Request):
     collection = get_collection(request)
     texto_filtrado = filtrar_input(continente)
@@ -88,7 +88,7 @@ async def buscar_paises_continente(continente: str, request: Request):
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
 
-@router.get("/paises/linguas/{linguas}")
+@router.get("/linguas/{linguas}")
 async def buscar_paises_por_lingua(linguas: str, request: Request):
     collection = get_collection(request)
     texto_filtrado = filtrar_input(linguas)
@@ -101,7 +101,36 @@ async def buscar_paises_por_lingua(linguas: str, request: Request):
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
     
-@router.get("/paises/moeda/{moeda}")
+@router.get("/linguas/multiplas/{linguas}")
+async def buscar_multiplas_linguas(linguas: str, request: Request):
+    collection = get_collection(request)
+    linguas_lista = [l.strip() for l in linguas.split(",")]
+    try:
+        regex_filtros = [
+            {"linguas": {"$regex": l, "$options": "i"}} 
+            for l in linguas_lista
+        ]
+        paises = list(collection.find(
+            {"$or": regex_filtros},  
+            {"_id": 0}
+        ))
+
+        if not paises:
+            return JSONResponse(
+                status_code=404,
+                content={"detail": "Nenhum país com essas línguas"}
+            )
+
+        return {"paises": paises, "detail": "Um ou mais país encontrado"}
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Erro no servidor: {str(e)}"}
+        )
+
+    
+@router.get("/moeda/{moeda}")
 async def buscar_paises_por_moeda(moeda: str, request: Request):
     collection = get_collection(request)
     texto_filtrado = filtrar_input(moeda)
@@ -115,7 +144,7 @@ async def buscar_paises_por_moeda(moeda: str, request: Request):
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
 
-@router.get("/paises/filtrar")
+@router.get("/filtrar/")
 async def buscar_paises_filtrados(
     request: Request,
     continente: Optional[str] = Query(
@@ -125,7 +154,7 @@ async def buscar_paises_filtrados(
         None, description="Língua(s) falada(s) no país."
     ),
     km2: Optional[float] = Query(
-        None, gt=0, description="Área do país em km², deve ser um valor positivo."
+        None, gt=0, description="Área do país em km²."
     ),
     habitantes: Optional[int] = Query(
         None, gt=0, description="Número de habitantes, deve ser um valor inteiro positivo."
@@ -182,5 +211,87 @@ async def buscar_paises_filtrados(
             content={"detail": "Erro interno no servidor."}
         )
 
-
-    
+@router.get("/habitantes/mais_que_{habitantes}")
+async def habitantes_maior_x(habitantes: int, request: Request):
+   collection = get_collection(request)
+   try: 
+    paises = list(collection.find(
+        {"habitantes": {"$gt": habitantes}},
+        {'_id': 0}
+        ))
+    if not paises:
+        return JSONResponse(status_code=404, content={"detail": "Nenhum país com essa quantia de habitantes"})
+    return {"paises": paises, "detail": "Um ou mais país encontrado"}
+   except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
+   
+@router.get("/habitantes/menos_que_{habitantes}")
+async def habitantes_menor_x(habitantes: int, request: Request):
+   collection = get_collection(request)
+   try: 
+    paises = list(collection.find(
+        {"habitantes": {"$lt": habitantes}},
+        {'_id': 0}
+        ))
+    if not paises:
+        return JSONResponse(status_code=404, content={"detail": "Nenhum país com essa quantia de habitantes"})
+    return {"paises": paises, "detail": "Um ou mais país encontrado"}
+   except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
+   
+@router.get("/habitantes/entre_{hab_min}_e_{hab_max}")
+async def habitantes_menor_x(hab_min: int, hab_max: int, request: Request):
+   collection = get_collection(request)
+   try: 
+    paises = list(collection.find(
+            {"habitantes": {"$gte": hab_min, "$lte": hab_max}},
+            {"_id": 0}
+        ))
+    if not paises:
+        return JSONResponse(status_code=404, content={"detail": "Nenhum país com essa quantia de habitantes"})
+    return {"paises": paises, "detail": "Um ou mais país encontrado"}
+   except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
+      
+   
+@router.get("/km2/mais_que_{km2}")
+async def km2_maior_x(km2: int, request: Request):
+   collection = get_collection(request)
+   try: 
+    paises = list(collection.find(
+        {"km2": {"$gt": km2}},
+        {'_id': 0}
+        ))
+    if not paises:
+        return JSONResponse(status_code=404, content={"detail": "Nenhum país com essa quantia de km2"})
+    return {"paises": paises, "detail": "Um ou mais país encontrado"}
+   except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
+   
+@router.get("/km2/menor_que_{km2}")
+async def km2_menor_x(km2: int, request: Request):
+   collection = get_collection(request)
+   try: 
+    paises = list(collection.find(
+        {"km2": {"$lt": km2}},
+        {'_id': 0}
+        ))
+    if not paises:
+        return JSONResponse(status_code=404, content={"detail": "Nenhum país com essa quantia de km2"})
+    return {"paises": paises, "detail": "Um ou mais país encontrado"}
+   except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})
+   
+@router.get("/km2/entre_{km2min}_e_{km2max}")
+async def habitantes_menor_x(km2min: int, km2max: int, request: Request):
+   collection = get_collection(request)
+   try: 
+    paises = list(collection.find(
+            {"km2": {"$gte": km2min, "$lte": km2max}},
+            {"_id": 0}
+        ))
+    if not paises:
+        return JSONResponse(status_code=404, content={"detail": "Nenhum país com essa quantia de habitantes"})
+    return {"paises": paises, "detail": "Um ou mais país encontrado"}
+   except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Erro no servidor: {str(e)}"})

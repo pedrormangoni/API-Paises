@@ -1,0 +1,28 @@
+{
+  "paises": [
+    {
+      "nome": "Brasil",
+      "continente": "America do Sul",
+      "habitantes": 203062512,
+      "linguas": ["Português"],
+      "moeda": "Real (BRL)",
+      "km2": 8515767,
+      "longitude": -51.9253,
+      "latitude": -14.235,
+      "climas": ["Tropical", "equatorial", "semiárido", "subtropical"],
+      "fusos_horarios": ["UTC−5", "UTC−2"]
+    },
+    {
+      "nome": "Argentina",
+      "continente": "America do Sul",
+      "habitantes": 45195777,
+      "linguas": ["Espanhol"],
+      "moeda": "Peso Argentino (ARS)",
+      "km2": 2780400,
+      "longitude": -63.6167,
+      "latitude": -38.4161,
+      "climas": ["Subtropical", "Temperado", "Desértico", "Frio"],
+      "fusos_horarios": ["UTC−3"]
+    }
+  ]
+}

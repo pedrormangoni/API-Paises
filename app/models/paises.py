@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Union
+from typing import List, Union
 
 class Pais(BaseModel):
     nome: str
@@ -10,8 +10,8 @@ class Pais(BaseModel):
     km2: float = Field(gt=0)
     longitude: float
     latitude: float
-    clima: Optional[str] = None
-    fuso_horario: Optional[str] = None
+    climas: Union[str, List[str]] = None
+    fusos_horarios: Union[str, List[str]] = None
     
 
 
